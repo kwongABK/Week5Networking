@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{f02f36b0-d397-47eb-a4de-1b6e589cc8b2}</ProjectGuid>
-    <RootNamespace>Week5Server</RootNamespace>
+    <ProjectGuid>{cee77a03-71f6-452b-bdce-e8b797d34890}</ProjectGuid>
+    <RootNamespace>Week5Client</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -142,7 +142,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Week5Server.cpp" />
+    <ClCompile Include="Week5Client.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
