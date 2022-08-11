@@ -1,10 +1,16 @@
 #include <enet/enet.h>
+#include "Message.h"
 
 #include <iostream>
+#include <string>
+#include <chrono>
 using namespace std;
 
 ENetAddress address;
 ENetHost* server = nullptr;
+string username;
+int secretNumber = 0;
+bool IsRunning = true;
 
 bool CreateServer()
 {
@@ -23,8 +29,62 @@ bool CreateServer()
     return server != nullptr;
 }
 
+void SendPacket(string message)
+{
+    Message* pack = new Message();
+    pack->username = username;
+    pack->content = message;
+    ENetPacket* packet = enet_packet_create(pack,
+        sizeof(Message) + 1,
+        ENET_PACKET_FLAG_RELIABLE);
+    cout << username << ": " << message << endl;
+
+    /* Send the packet to the peer over channel id 0. */
+    /* One could also broadcast the packet by         */
+    enet_host_broadcast(server, 0, packet);
+    enet_host_flush(server);
+}
+
+void HandlePacket(ENetEvent event)
+{
+    Message* received = (Message*)(event.packet->data);
+    string sender = received->username;
+    string message = received->content;
+    cout << sender << ": " << message << endl;
+
+    if (received->content == "quit")
+    {
+        IsRunning = false;
+    }
+    else
+    {
+        int guess = atoi(&message[0]);
+        if (guess < secretNumber)
+        {
+            SendPacket("Too low.");
+        }
+        else if (guess > secretNumber)
+        {
+            SendPacket("Too high.");
+        }
+        else
+        {
+            SendPacket("Correct!");
+            secretNumber = (rand() % 100) + 1;
+            cout << "Your new secret number is " << secretNumber << endl;
+            SendPacket("New # chosen.");
+        }
+    }
+
+    /* Clean up the packet now that we're done using it. */
+    enet_packet_destroy(event.packet);
+}
+
 int main(int argc, char** argv)
 {
+    cout << "Enter a name for the server:" << endl;
+    cin >> username;
+
     if (enet_initialize() != 0)
     {
         fprintf(stderr, "An error occurred while initializing ENet.\n");
@@ -40,7 +100,12 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
-    while (1)
+    srand(time(NULL));
+    secretNumber = (rand() % 100) + 1;
+    cout << "Hello, " << username << endl;
+    cout << "Your secret number is " << secretNumber << endl;
+
+    while (IsRunning)
     {
         ENetEvent event;
         /* Wait up to 1000 milliseconds for an event. */
@@ -56,37 +121,12 @@ int main(int argc, char** argv)
                 /* Store any relevant client information here. */
                 event.peer->data = (void*)("Client information");
 
-                {
-                    /* Create a reliable packet of size 7 containing "packet\0" */
-                    ENetPacket* packet = enet_packet_create("hello",
-                        strlen("hello") + 1,
-                        ENET_PACKET_FLAG_RELIABLE);
-                    /* Extend the packet so and append the string "foo", so it now */
-                    /* contains "packetfoo\0"                                      */
-                    //enet_packet_resize(packet, strlen("packetfoo") + 1);
-                    //strcpy(&packet->data[strlen("packet")], "foo");
-                    /* Send the packet to the peer over channel id 0. */
-                    /* One could also broadcast the packet by         */
-                    enet_host_broadcast(server, 0, packet);
-                    //enet_peer_send(event.peer, 0, packet);
-
-                    /* One could just use enet_host_service() instead. */
-                    //enet_host_service();
-                    enet_host_flush(server);
-                }
+                SendPacket("Guess my #!");
+                SendPacket("Range is 1-100");
                 break;
             case ENET_EVENT_TYPE_RECEIVE:
-                cout << "A packet of length "
-                    << event.packet->dataLength << endl
-                    << "containing " << (char*)event.packet->data
-                    << endl;
-                //<< "was received from " << (char*)event.peer->data
-                //<< " on channel " << event.channelID << endl;
-            /* Clean up the packet now that we're done using it. */
-                enet_packet_destroy(event.packet);
-
+                HandlePacket(event);
                 break;
-
             case ENET_EVENT_TYPE_DISCONNECT:
                 cout << (char*)event.peer->data << "disconnected." << endl;
                 /* Reset the peer's client information. */
